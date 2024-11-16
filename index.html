@@ -1,62 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Tableau Web Data Connector</title>
-    <script type="text/javascript" src="https://tableau.github.io/webdataconnector/libs/tableauwdc-2.3.latest.js"></script>
-    <script type="text/javascript">
-        var myConnector = tableau.makeConnector();
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Data Connector</title>
+    <script src="https://connectors.tableau.com/libs/tableauwdc-2.3.0.js"></script>
+    <script>
+        (function () {
+            // Define the connector
+            const myConnector = tableau.makeConnector();
 
-        // Hàm lấy dữ liệu từ API
-        myConnector.getData = function(table, doneCallback) {
-            // Gửi yêu cầu GET tới API của bạn
-            fetch("http://localhost:8000/api/get-all-data/")
-                .then(response => response.json())
-                .then(data => {
-                    // Dữ liệu từ API trả về là mảng các đối tượng
-                    data.forEach(row => {
-                        table.appendRow({
-                            "batch_id": row.batch_id,
-                            "Brew_Date": row.Brew_Date,
-                            "Beer_Style": row.Beer_Style,
-                            "SKU": row.SKU,
-                            "Location": row.Location,
-                            "Fermentation_Time": row.Fermentation_Time,
-                            "Temperature": row.Temperature,
-                            "pH_Level": row.pH_Level,
-                            "Gravity": row.Gravity,
-                            "Alcohol_Content": row.Alcohol_Content,
-                            "Bitterness": row.Bitterness,
-                            "Color": row.Color,
-                            "Ingredient_Ratio": row.Ingredient_Ratio,
-                            "Volume_Produced": row.Volume_Produced,
-                            "Total_Sales": row.Total_Sales,
-                            "Quality_Score": row.Quality_Score,
-                            "Brewhouse_Efficiency": row.Brewhouse_Efficiency,
-                            "Loss_During_Brewing": row.Loss_During_Brewing,
-                            "Loss_During_Fermentation": row.Loss_During_Fermentation,
-                            "Loss_During_Bottling_Kegging": row.Loss_During_Bottling_Kegging
-                        });
+            // Schema definition
+            myConnector.getSchema = function (schemaCallback) {
+                const cols = [
+                    { id: "batch_id", alias: "Batch ID", dataType: tableau.dataTypeEnum.int },
+                    { id: "Brew_Date", alias: "Brew Date", dataType: tableau.dataTypeEnum.datetime },
+                    { id: "Beer_Style", alias: "Beer Style", dataType: tableau.dataTypeEnum.string },
+                    { id: "SKU", alias: "SKU", dataType: tableau.dataTypeEnum.string },
+                    { id: "Location", alias: "Location", dataType: tableau.dataTypeEnum.string },
+                    { id: "Fermentation_Time", alias: "Fermentation Time", dataType: tableau.dataTypeEnum.float },
+                    { id: "Temperature", alias: "Temperature", dataType: tableau.dataTypeEnum.float },
+                    { id: "pH_Level", alias: "pH Level", dataType: tableau.dataTypeEnum.float },
+                    { id: "Gravity", alias: "Gravity", dataType: tableau.dataTypeEnum.float },
+                    { id: "Alcohol_Content", alias: "Alcohol Content", dataType: tableau.dataTypeEnum.float },
+                    { id: "Bitterness", alias: "Bitterness", dataType: tableau.dataTypeEnum.float },
+                    { id: "Color", alias: "Color", dataType: tableau.dataTypeEnum.string },
+                    { id: "Ingredient_Ratio", alias: "Ingredient Ratio", dataType: tableau.dataTypeEnum.string },
+                    { id: "Volume_Produced", alias: "Volume Produced", dataType: tableau.dataTypeEnum.float },
+                    { id: "Total_Sales", alias: "Total Sales", dataType: tableau.dataTypeEnum.float },
+                    { id: "Quality_Score", alias: "Quality Score", dataType: tableau.dataTypeEnum.float },
+                    { id: "Brewhouse_Efficiency", alias: "Brewhouse Efficiency", dataType: tableau.dataTypeEnum.float },
+                    { id: "Loss_During_Brewing", alias: "Loss During Brewing", dataType: tableau.dataTypeEnum.float },
+                    { id: "Loss_During_Fermentation", alias: "Loss During Fermentation", dataType: tableau.dataTypeEnum.float },
+                    { id: "Loss_During_Bottling_Kegging", alias: "Loss During Bottling/Kegging", dataType: tableau.dataTypeEnum.float }
+                ];
+
+                const tableSchema = {
+                    id: "brewData",
+                    alias: "Brewery Production Data",
+                    columns: cols
+                };
+
+                schemaCallback([tableSchema]);
+            };
+
+            // Data retrieval
+            myConnector.getData = function (table, doneCallback) {
+                fetch("http://localhost:8000/api/get-all-data/")
+                    .then(response => response.json())
+                    .then(data => {
+                        const tableData = data.map(item => ({
+                            batch_id: item.batch_id,
+                            Brew_Date: item.Brew_Date,
+                            Beer_Style: item.Beer_Style,
+                            SKU: item.SKU,
+                            Location: item.Location,
+                            Fermentation_Time: item.Fermentation_Time,
+                            Temperature: item.Temperature,
+                            pH_Level: item.pH_Level,
+                            Gravity: item.Gravity,
+                            Alcohol_Content: item.Alcohol_Content,
+                            Bitterness: item.Bitterness,
+                            Color: item.Color,
+                            Ingredient_Ratio: item.Ingredient_Ratio,
+                            Volume_Produced: item.Volume_Produced,
+                            Total_Sales: item.Total_Sales,
+                            Quality_Score: item.Quality_Score,
+                            Brewhouse_Efficiency: item.Brewhouse_Efficiency,
+                            Loss_During_Brewing: item.Loss_During_Brewing,
+                            Loss_During_Fermentation: item.Loss_During_Fermentation,
+                            Loss_During_Bottling_Kegging: item.Loss_During_Bottling_Kegging
+                        }));
+
+                        table.appendRows(tableData);
+                        doneCallback();
+                    })
+                    .catch(error => {
+                        console.error("Error fetching data: ", error);
                     });
-                    doneCallback();
-                })
-                .catch(error => {
-                    console.error('Error fetching data from API:', error);
-                    doneCallback();
-                });
-        };
+            };
 
-        // Đăng ký kết nối với Tableau
-        tableau.registerConnector(myConnector);
+            tableau.registerConnector(myConnector);
 
-        // Hàm khi người dùng nhấn nút kết nối
-        function init() {
-            tableau.connectionName = "Django API Data";
-            tableau.getData();
-        }
+            // Trigger the connector
+            document.querySelector("#submitButton").addEventListener("click", function () {
+                tableau.connectionName = "Brewery API Data";
+                tableau.submit();
+            });
+        })();
     </script>
 </head>
 <body>
-    <h1>Tableau Web Data Connector</h1>
-    <button onclick="init()">Connect to Django API</button>
+    <h1>Brewery Data WDC</h1>
+    <button id="submitButton">Fetch Data</button>
 </body>
 </html>
+
