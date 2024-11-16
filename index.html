@@ -3,15 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Data Connector</title>
-    <script src="https://connectors.tableau.com/libs/tableauwdc-2.3.0.js"></script>
+    <title>Brewery Data Connector</title>
+    <script src="https://connectors.tableau.com/libs/tableauwdc-2.3.latest.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Brewery Data Connector</h1>
+    <p>Click the button below to load brewery production data into Tableau.</p>
+    <button id="submitButton">Connect to Data</button>
+    <div id="errorMessage"></div>
+
     <script>
         (function () {
-            // Define the connector
-            const myConnector = tableau.makeConnector();
+            'use strict';
 
-            // Schema definition
-            myConnector.getSchema = function (schemaCallback) {
+            // Create the connector object
+            var myConnector = tableau.makeConnector();
+
+            // Define the schema
+            myConnector.getSchema = function(schemaCallback) {
                 const cols = [
                     { id: "batch_id", alias: "Batch ID", dataType: tableau.dataTypeEnum.int },
                     { id: "Brew_Date", alias: "Brew Date", dataType: tableau.dataTypeEnum.datetime },
@@ -36,19 +61,31 @@
                 ];
 
                 const tableSchema = {
-                    id: "brewData",
+                    id: "breweryData",
                     alias: "Brewery Production Data",
-                    columns: cols
+                    columns: cols,
+                    incrementColumnId: "batch_id"
                 };
 
                 schemaCallback([tableSchema]);
             };
 
-            // Data retrieval
-            myConnector.getData = function (table, doneCallback) {
+            // Download the data
+            myConnector.getData = function(table, doneCallback) {
+                const errorDiv = document.getElementById('errorMessage');
+                
                 fetch("http://localhost:8000/api/get-all-data/")
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
+                        if (!Array.isArray(data)) {
+                            throw new Error('Data is not in the expected format');
+                        }
+
                         const tableData = data.map(item => ({
                             batch_id: item.batch_id,
                             Brew_Date: item.Brew_Date,
@@ -76,23 +113,24 @@
                         doneCallback();
                     })
                     .catch(error => {
-                        console.error("Error fetching data: ", error);
+                        errorDiv.textContent = `Error fetching data: ${error.message}`;
+                        tableau.abortWithError(error.message);
                     });
             };
 
             tableau.registerConnector(myConnector);
 
-            // Trigger the connector
-            document.querySelector("#submitButton").addEventListener("click", function () {
-                tableau.connectionName = "Brewery API Data";
-                tableau.submit();
+            // Add event listeners after the page has loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                const submitButton = document.getElementById('submitButton');
+                if (submitButton) {
+                    submitButton.addEventListener('click', function() {
+                        tableau.connectionName = "Brewery Production Data";
+                        tableau.submit();
+                    });
+                }
             });
         })();
     </script>
-</head>
-<body>
-    <h1>Brewery Data WDC</h1>
-    <button id="submitButton">Fetch Data</button>
 </body>
 </html>
-
