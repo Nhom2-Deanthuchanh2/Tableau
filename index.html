@@ -73,7 +73,7 @@
             // Download the data
             myConnector.getData = function (table, doneCallback) {
                 const errorDiv = document.getElementById("errorMessage");
-                const pageSize = 10000; // Số bản ghi mỗi trang
+                const pageSize = 50000; // Số bản ghi mỗi trang
                 let offset = 0; // Bắt đầu từ trang đầu tiên
 
                 async function fetchData() {
